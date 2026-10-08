@@ -1,0 +1,737 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 36 36%27%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2716%27 fill=%27%23E4FF3A%27/%3E%3C/svg%3E">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#07090C">
+<title>Padel Scoreboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #07090C;
+    --fg: #F4F6F8;
+    --muted: #9AA3AE;
+    --muted-2: #B4BCC6;
+    --ball: #E4FF3A;
+    --blue: #4C9BFF;
+    --orange: #FF9A3C;
+    --live: #3DDC84;
+    --off: #FF4D4D;
+    --cond: 'Barlow Condensed', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font-family: 'Barlow', sans-serif; }
+  body { overflow: hidden; -webkit-user-select: none; user-select: none; }
+  button { font: inherit; color: inherit; }
+  [hidden] { display: none !important; }
+
+  /* ---------- Start screen ---------- */
+  .start { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px; background: var(--bg); z-index: 10; }
+  .start form { width: min(520px, 100%); display: flex; flex-direction: column; gap: 20px; }
+  .start h1 { margin: 0; font-family: var(--cond); font-size: 56px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.02em; }
+  .start p { margin: 0; color: var(--muted-2); font-size: 20px; line-height: 1.4; }
+  .start label { font-size: 18px; font-weight: 600; color: var(--muted-2); letter-spacing: 0.08em; text-transform: uppercase; }
+  .start input { width: 100%; height: 88px; padding: 0 24px; border-radius: 20px; border: 2px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); color: var(--fg); font-family: var(--cond); font-size: 56px; font-weight: 700; letter-spacing: 0.2em; text-align: center; }
+  .start input:focus { outline: none; border-color: var(--ball); }
+  .start .go { height: 80px; border: 0; border-radius: 999px; background: var(--ball); color: var(--bg); font-family: var(--cond); font-size: 34px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }
+  .seg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 6px; border-radius: 999px; background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.12); margin: 0; }
+  .seg legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .seg input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg label { display: grid; place-items: center; height: 60px; border-radius: 999px; cursor: pointer; color: var(--muted-2);
+               font-family: var(--cond); font-size: 28px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+  .seg input:checked + label { background: var(--fg); color: var(--bg); }
+  .seg input:focus-visible + label { outline: 3px solid var(--ball); outline-offset: 2px; }
+  .start .err { color: var(--off); font-size: 20px; min-height: 1.4em; }
+
+  /* ---------- Board ---------- */
+  .board { height: 100dvh; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 2.2vh;
+           padding: max(2.5vh, env(safe-area-inset-top)) max(2.6vw, env(safe-area-inset-right)) max(2vh, env(safe-area-inset-bottom)) max(2.6vw, env(safe-area-inset-left)); }
+
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; }
+  .top-left { display: flex; align-items: baseline; gap: 18px; font-family: var(--cond); text-transform: uppercase; }
+  .set-no { font-size: clamp(28px, 3.6vh, 44px); font-weight: 700; letter-spacing: 0.02em; }
+  .mode { font-size: clamp(20px, 2.6vh, 30px); font-weight: 600; color: var(--muted); letter-spacing: 0.04em; }
+  .banner { padding: 8px 28px; border-radius: 999px; background: var(--ball); color: var(--bg); font-family: var(--cond); font-size: clamp(26px, 3.4vh, 40px); font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
+  .top-right { display: flex; align-items: center; gap: 14px; font-size: 20px; font-weight: 600; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+  .pill-btn { display: flex; align-items: center; gap: 12px; height: 56px; padding: 0 22px 0 18px; border-radius: 999px; cursor: pointer;
+              font-size: 20px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; background: transparent; color: var(--muted-2); border: 2px solid rgba(255,255,255,0.28); }
+  .pill-btn[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+  .lang-btn { padding: 0 20px 0 16px; color: var(--fg); }
+  .divider { width: 1px; height: 32px; background: rgba(255,255,255,0.14); }
+  .status-dot { width: 14px; height: 14px; border-radius: 50%; background: var(--off); box-shadow: 0 0 0 6px rgba(255,77,77,0.18); }
+  .status-dot.live { background: var(--live); box-shadow: 0 0 0 6px rgba(61,220,132,0.18); }
+  .status-text { color: var(--fg); }
+
+  .teams { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2vw; min-height: 0; }
+  @media (orientation: portrait) { .teams { grid-template-columns: 1fr; grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 2vh; } }
+
+  .card { display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; gap: 1.6vh; min-height: 0; padding: 2.6vh 2.4vw 2.8vh; border-radius: 32px;
+          background: rgba(255,255,255,0.03); border: 6px solid rgba(255,255,255,0.08); transition: border-color .25s, background .25s; }
+  .card.serving { border-color: var(--ball); }
+  .card.blue.serving { background: linear-gradient(180deg, rgba(76,155,255,0.12), rgba(255,255,255,0.03)); }
+  .card.orange.serving { background: linear-gradient(180deg, rgba(255,154,60,0.12), rgba(255,255,255,0.03)); }
+
+  .card-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .name { display: flex; align-items: center; gap: 14px; min-width: 0; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
+  .name .dot { flex: none; width: 20px; height: 20px; border-radius: 50%; }
+  .blue .dot { background: var(--blue); } .orange .dot { background: var(--orange); }
+  .name span:last-child { font-family: var(--cond); font-size: clamp(30px, 4.4vh, 52px); font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tag { flex: none; padding: 6px 16px; border-radius: 999px; border: 2px solid; font-size: 20px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+  .blue .tag { color: var(--blue); } .orange .tag { color: var(--orange); }
+
+  .serve-row { height: clamp(56px, 7.4vh, 80px); display: flex; align-items: center; justify-content: flex-start; }
+  .serve-row.right { justify-content: flex-end; }
+  .serve-row.right .serve { flex-direction: row-reverse; padding: 8px 12px 8px 26px; }
+  .serve { display: flex; align-items: center; gap: 16px; padding: 8px 26px 8px 12px; border-radius: 999px; background: var(--ball); color: var(--bg); font-family: var(--cond); text-transform: uppercase; }
+  .serve svg { width: clamp(36px, 5vh, 52px); height: auto; }
+  .serve b { font-size: clamp(30px, 4.4vh, 48px); font-weight: 800; letter-spacing: 0.04em; }
+  .card:not(.serving) .serve { display: none; }
+
+  .points-box { container-type: size; min-height: 0; display: grid; place-items: center; }
+  .points { font-family: var(--cond); font-weight: 800; line-height: 0.8; letter-spacing: -0.02em; font-variant-numeric: tabular-nums;
+            font-size: min(62cqw, 100cqh); transition: transform .18s ease-out; }
+  .points.bump { transform: scale(1.06); }
+
+  .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .stat { display: flex; align-items: center; justify-content: space-between; padding: 1.2vh 24px; border-radius: 18px; background: rgba(255,255,255,0.06); }
+  .stat span { font-size: clamp(18px, 2.4vh, 26px); font-weight: 600; color: var(--muted-2); letter-spacing: 0.08em; text-transform: uppercase; }
+  .stat b { font-family: var(--cond); font-size: clamp(56px, 9vh, 100px); font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+
+  .foot { display: flex; align-items: center; justify-content: center; gap: 36px; min-height: 40px; font-family: var(--cond); font-size: clamp(20px, 2.8vh, 30px); font-weight: 600; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+  .foot button { background: none; border: 0; color: var(--muted); cursor: pointer; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--cond); font-size: inherit; font-weight: 600; min-height: 44px; }
+
+  /* ---------- Dialogs ---------- */
+  .dlg { width: min(560px, calc(100vw - 32px)); padding: 0; border: 2px solid rgba(255,255,255,0.14); border-radius: 28px; background: #10141A; color: var(--fg); }
+  .dlg::backdrop { background: rgba(3,4,6,0.78); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  .dlg-body { display: flex; flex-direction: column; gap: 20px; padding: 32px; }
+  .dlg h2 { margin: 0; display: flex; align-items: center; gap: 14px; font-family: var(--cond); font-size: 44px; font-weight: 800; letter-spacing: 0.02em; text-transform: uppercase; }
+  .dlg h2 .dot { width: 20px; height: 20px; border-radius: 50%; }
+  .dlg label, .dlg .hint { font-size: 18px; font-weight: 600; color: var(--muted-2); letter-spacing: 0.08em; text-transform: uppercase; }
+  .dlg input { width: 100%; height: 84px; padding: 0 24px; border-radius: 18px; border: 2px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); color: var(--fg);
+               font-family: var(--cond); font-size: 48px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; -webkit-user-select: text; user-select: text; }
+  .dlg input:focus { outline: none; border-color: var(--ball); }
+  .dlg-actions { display: flex; justify-content: flex-end; gap: 14px; }
+  .btn { height: 64px; padding: 0 32px; border-radius: 999px; cursor: pointer; font-family: var(--cond); font-size: 28px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+  .btn-ghost { background: transparent; color: var(--fg); border: 2px solid rgba(255,255,255,0.28); }
+  .btn-primary { background: var(--ball); color: var(--bg); border: 2px solid var(--ball); }
+  .lang-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .lang-opt { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 72px; padding: 12px 20px; border-radius: 18px; cursor: pointer; text-align: left;
+              background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.12); }
+  .lang-opt b { font-family: var(--cond); font-size: 30px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
+  .lang-opt small { font-size: 15px; font-weight: 600; color: var(--muted); letter-spacing: 0.04em; }
+  .lang-opt[aria-checked="true"] { border-color: var(--ball); background: rgba(228,255,58,0.10); }
+  .lang-opt[aria-checked="true"] small { color: var(--ball); }
+
+  /* ---------- iPhone quer (wenig Höhe) ---------- */
+  @media (max-height: 500px) {
+    .board { gap: 8px; padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
+    .top { min-height: 44px; gap: 10px; }
+    .set-no { font-size: 24px; }
+    .mode, .label-pin, .pill-btn .txt, #langTxt { display: none; }
+    .banner { padding: 4px 18px; font-size: 22px; }
+    .top-right { gap: 10px; font-size: 15px; }
+    .pill-btn, .lang-btn { height: 44px; padding: 0 12px; }
+    .pill-btn svg { width: 22px; height: 22px; }
+    .divider { height: 24px; }
+    .status-dot { width: 10px; height: 10px; box-shadow: 0 0 0 4px rgba(61,220,132,0.18); }
+
+    .teams { gap: 10px; }
+    .card { gap: 4px; padding: 6px 14px 10px; border-width: 4px; border-radius: 20px; }
+    .card-head { gap: 8px; }
+    .name { gap: 8px; min-height: 44px; }
+    .name .dot { width: 12px; height: 12px; }
+    .name span:last-child { font-size: 24px; }
+    .tag { display: none; }
+    .serve-row { height: 36px; }
+    .serve { gap: 8px; padding: 4px 16px 4px 6px; }
+    .serve-row.right .serve { padding: 4px 6px 4px 16px; }
+    .serve svg { width: 28px; }
+    .serve b { font-size: 22px; }
+    .stats { gap: 8px; }
+    .stat { padding: 2px 12px; border-radius: 12px; }
+    .stat span { font-size: 13px; }
+    .stat b { font-size: 34px; }
+
+    .foot { min-height: 0; gap: 20px; font-size: 15px; }
+    .foot button { min-height: 32px; }
+
+    .start h1 { font-size: 36px; }
+    .start p { font-size: 16px; }
+    .start form { gap: 10px; }
+    .start input { height: 60px; font-size: 38px; }
+    .seg label { height: 44px; font-size: 22px; }
+    .start .go { height: 56px; font-size: 26px; }
+
+    .dlg { max-height: calc(100dvh - 24px); overflow: auto; }
+    .dlg-body { gap: 12px; padding: 18px 22px; }
+    .dlg h2 { font-size: 30px; }
+    .dlg .hint { display: none; }
+    .dlg input { height: 60px; font-size: 34px; }
+    .btn { height: 48px; font-size: 22px; padding: 0 24px; }
+    .lang-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .lang-opt { min-height: 52px; padding: 6px 12px; }
+    .lang-opt b { font-size: 22px; }
+    .lang-opt small { font-size: 12px; }
+  }
+  @media (max-height: 500px) and (min-width: 700px) {
+    .dlg { width: min(720px, calc(100vw - 32px)); }
+  }
+
+  @media (max-width: 700px) {
+    .mode, .top-right .label-pin { display: none; }
+    .pill-btn .txt { display: none; }
+    .pill-btn { padding: 0 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="start" id="start">
+  <form id="startForm" autocomplete="off">
+    <h1 data-i18n="title">Padel Scoreboard</h1>
+    <p data-i18n="intro">Enter the 6-digit match PIN from your watch (Settings → Live Broadcast).</p>
+    <fieldset class="seg">
+      <legend data-i18n="watchApp">Watch app</legend>
+      <input type="radio" name="app" id="appPadel" value="padel"><label for="appPadel">Padel Smash</label>
+      <input type="radio" name="app" id="appTennis" value="tennis"><label for="appTennis">Tennis Smash</label>
+      <input type="radio" name="app" id="appWatch" value="watch"><label for="appWatch">Apple Watch</label>
+    </fieldset>
+    <label for="pin" data-i18n="matchPin">Match PIN</label>
+    <input id="pin" name="pin" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="000000" required>
+    <div class="err" id="startErr" role="alert"></div>
+    <button class="go" type="submit" data-i18n="show">Show scoreboard</button>
+  </form>
+</div>
+
+<main class="board" id="board" hidden>
+  <header class="top">
+    <div class="top-left">
+      <span class="set-no" id="setNo">Set 1</span>
+      <span class="mode" id="mode"></span>
+    </div>
+    <div class="banner" id="banner" hidden></div>
+    <div class="top-right">
+      <button class="pill-btn" id="soundBtn" type="button" aria-pressed="true" data-i18n-aria="scoreAnnouncements" aria-label="Score announcements">
+        <svg id="icoOn" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19.5 5.5a9 9 0 0 1 0 13"/></svg>
+        <svg id="icoOff" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l5 6"/><path d="M22 9l-5 6"/></svg>
+        <span class="txt" id="soundTxt">Sound on</span>
+      </button>
+      <button class="pill-btn lang-btn" id="langBtn" type="button" data-i18n-aria="announcementLanguage" aria-label="Announcement language" aria-haspopup="dialog">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18"/></svg>
+        <span id="langTxt">EN</span>
+      </button>
+      <span class="divider"></span>
+      <span class="status-dot" id="statusDot"></span>
+      <span class="status-text" id="statusText" data-i18n="connecting">Connecting</span>
+      <span class="label-pin" id="pinLabel"></span>
+    </div>
+  </header>
+
+  <section class="teams">
+    <article class="card blue" id="cardP">
+      <div class="card-head">
+        <button class="name" type="button" data-side="player" data-i18n-aria="editName" aria-label="Edit name"><span class="dot"></span><span id="nameP">Player</span></button>
+        <span class="tag" data-i18n="teamBlue">Team Blue</span>
+      </div>
+      <div class="serve-row"><div class="serve">
+        <svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16" fill="#07090C"/><path d="M5 9c7 4 7 14 0 18M31 9c-7 4-7 14 0 18" fill="none" stroke="#E4FF3A" stroke-width="2.4" stroke-linecap="round"/></svg>
+        <b data-i18n="serving">Serving</b>
+      </div></div>
+      <div class="points-box"><div class="points" id="ptsP">0</div></div>
+      <div class="stats">
+        <div class="stat"><span data-i18n="games">Games</span><b id="gamesP">0</b></div>
+        <div class="stat"><span data-i18n="sets">Sets</span><b id="setsP">0</b></div>
+      </div>
+    </article>
+
+    <article class="card orange" id="cardO">
+      <div class="card-head">
+        <button class="name" type="button" data-side="opponent" data-i18n-aria="editName" aria-label="Edit name"><span class="dot"></span><span id="nameO">Opponent</span></button>
+        <span class="tag" data-i18n="teamOrange">Team Orange</span>
+      </div>
+      <div class="serve-row"><div class="serve">
+        <svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16" fill="#07090C"/><path d="M5 9c7 4 7 14 0 18M31 9c-7 4-7 14 0 18" fill="none" stroke="#E4FF3A" stroke-width="2.4" stroke-linecap="round"/></svg>
+        <b data-i18n="serving">Serving</b>
+      </div></div>
+      <div class="points-box"><div class="points" id="ptsO">0</div></div>
+      <div class="stats">
+        <div class="stat"><span data-i18n="games">Games</span><b id="gamesO">0</b></div>
+        <div class="stat"><span data-i18n="sets">Sets</span><b id="setsO">0</b></div>
+      </div>
+    </article>
+  </section>
+
+  <footer class="foot">
+    <span id="updated" data-i18n="waiting">Waiting for first point</span>
+    <button type="button" id="fsBtn" data-i18n="fullscreen" hidden>Fullscreen</button>
+    <button type="button" id="leaveBtn" data-i18n="changePin">Change PIN</button>
+  </footer>
+</main>
+
+<dialog class="dlg" id="nameDlg" aria-labelledby="nameTitle">
+  <form class="dlg-body" id="nameForm" method="dialog">
+    <h2 id="nameTitle"><span class="dot" id="nameDot"></span><span id="nameTeam">Team Blue</span></h2>
+    <label for="nameInput" data-i18n="playerNames">Player names</label>
+    <input id="nameInput" maxlength="24" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Oliver &amp; James">
+    <div class="dlg-actions">
+      <button class="btn btn-ghost" type="button" id="nameCancel" data-i18n="cancel">Cancel</button>
+      <button class="btn btn-primary" type="submit" data-i18n="save">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="dlg" id="langDlg" aria-labelledby="langTitle">
+  <div class="dlg-body">
+    <h2 id="langTitle" data-i18n="announcements">Announcements</h2>
+    <span class="hint" data-i18n="langHint">Language of the spoken score</span>
+    <div class="lang-grid" id="langGrid" role="radiogroup" aria-labelledby="langTitle"></div>
+    <div class="dlg-actions">
+      <button class="btn btn-ghost" type="button" id="langClose" data-i18n="close">Close</button>
+    </div>
+  </div>
+</dialog>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+// Öffentliche Endpunkte von tennissmash.app (gleicher anon-Key wie deren Web-App).
+// Öffentliche Endpunkte der beiden Apps (gleiche anon-Keys wie deren Web-Apps).
+// Gleiches Protokoll: rpc get_match_by_pin + Realtime-Broadcast auf "match-<PIN>".
+const SOURCES = {
+  // Eigene Apple-Watch-App (padel-watch/backend/schema.sql). Leer = Option ausgeblendet.
+  watch: {
+    name: 'Apple Watch',
+    url: 'https://wzmeqtyjjfrupjdklroj.supabase.co',
+    key: 'sb_publishable_2KSJJrup3x3tKgpmwZ2qrQ_MO3AdYxj',
+  },
+  padel: {
+    name: 'Padel Smash',
+    url: 'https://ezzoprwezrpvaniuhmfy.supabase.co',
+    key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6em9wcndlenJwdmFuaXVobWZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNzY2NzgsImV4cCI6MjA5MTc1MjY3OH0.hnHAXBOxXdmskEr_5DBffD1pUBI3iS4QAAbzof9hwOs',
+  },
+  tennis: {
+    name: 'Tennis Smash',
+    url: 'https://txstllfqoxeybifjsrcj.supabase.co',
+    key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4c3RsbGZxb3hleWJpZmpzcmNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2NDg2NjYsImV4cCI6MjA5MzIyNDY2Nn0.e4pRMQcsTYXwmfVx6vtH1NoZ28YglmsFUyfQii1q21o',
+  },
+};
+const POLL_MS = 20000;
+
+const clients = {};
+const clientFor = (app) => (clients[app] ??= createClient(SOURCES[app].url, SOURCES[app].key, { auth: { persistSession: false } }));
+let app = 'padel';
+let sb = null;
+const $ = (id) => document.getElementById(id);
+
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+
+// ---------- Oberflächensprache (Browsersprache, Englisch als Rückfall) ----------
+const UI = {
+  en: {
+    title: 'Padel Scoreboard', intro: 'Enter the 6-digit match PIN from your watch (Settings → Live Broadcast).',
+    watchApp: 'Watch app', matchPin: 'Match PIN', show: 'Show scoreboard', set: 'Set {n}',
+    soundOn: 'Sound on', soundOff: 'Sound off', scoreAnnouncements: 'Score announcements',
+    announcementLanguage: 'Announcement language', editName: 'Edit name',
+    connecting: 'Connecting', live: 'Live', reconnecting: 'Reconnecting', offline: 'Offline',
+    teamBlue: 'Team Blue', teamOrange: 'Team Orange', serving: 'Serving', games: 'Games', sets: 'Sets',
+    waiting: 'Waiting for first point', lastPointS: 'Last point {n}s ago', lastPointM: 'Last point {n} min ago',
+    fullscreen: 'Fullscreen', exitFullscreen: 'Exit fullscreen', changePin: 'Change PIN',
+    playerNames: 'Player names', cancel: 'Cancel', save: 'Save',
+    announcements: 'Announcements', langHint: 'Language of the spoken score', close: 'Close',
+    selected: 'Selected', noVoice: 'No voice on this device',
+    mexicano: 'Mexicano', goldenPoint: 'Golden point', advantage: 'Advantage',
+    superTieBreak: 'Super tie-break', tieBreak: 'Tie-break', deuce: 'Deuce',
+    enterSix: 'Please enter 6 digits.', notFound: 'No {app} match found for this PIN.', loadFailed: 'Could not load the match.',
+    player: 'Player', opponent: 'Opponent',
+  },
+  de: {
+    title: 'Padel Scoreboard', intro: 'Gib den 6-stelligen Match-PIN von deiner Uhr ein (Einstellungen → Live Broadcast).',
+    watchApp: 'Uhren-App', matchPin: 'Match-PIN', show: 'Scoreboard anzeigen', set: 'Satz {n}',
+    soundOn: 'Ton an', soundOff: 'Ton aus', scoreAnnouncements: 'Spielstand-Ansage',
+    announcementLanguage: 'Sprache der Ansage', editName: 'Namen ändern',
+    connecting: 'Verbinde', live: 'Live', reconnecting: 'Verbinde neu', offline: 'Offline',
+    teamBlue: 'Team Blau', teamOrange: 'Team Orange', serving: 'Aufschlag', games: 'Spiele', sets: 'Sätze',
+    waiting: 'Warte auf ersten Punkt', lastPointS: 'Letzter Punkt vor {n} s', lastPointM: 'Letzter Punkt vor {n} min',
+    fullscreen: 'Vollbild', exitFullscreen: 'Vollbild beenden', changePin: 'PIN ändern',
+    playerNames: 'Spielernamen', cancel: 'Abbrechen', save: 'Speichern',
+    announcements: 'Ansagen', langHint: 'Sprache der Spielstand-Ansage', close: 'Schließen',
+    selected: 'Ausgewählt', noVoice: 'Keine Stimme auf diesem Gerät',
+    mexicano: 'Mexicano', goldenPoint: 'Golden Point', advantage: 'Vorteil',
+    superTieBreak: 'Super-Tie-Break', tieBreak: 'Tie-Break', deuce: 'Einstand',
+    enterSix: 'Bitte 6 Ziffern eingeben.', notFound: 'Kein {app}-Match mit diesem PIN gefunden.', loadFailed: 'Match konnte nicht geladen werden.',
+    player: 'Spieler', opponent: 'Gegner',
+  },
+};
+const uiLang = (navigator.language || 'en').toLowerCase().startsWith('de') ? 'de' : 'en';
+const t = (key, vars = {}) => (UI[uiLang][key] ?? UI.en[key] ?? key).replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '');
+
+function translateStatic() {
+  document.documentElement.lang = uiLang;
+  document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-aria]').forEach((el) => el.setAttribute('aria-label', t(el.dataset.i18nAria)));
+}
+const defaultNames = () => ({ player: t('player'), opponent: t('opponent') });
+
+let pin = null;
+let match = null;
+let channel = null;
+let pollTimer = null;
+let wakeLock = null;
+let soundOn = store.get('sound', true);
+let names = defaultNames();
+
+// ---------- Score logic (wie tennissmash.app) ----------
+const LABELS = ['0', '15', '30', '40'];
+const isMexicano = (m) => m.match_type === 1;
+const isRawCount = (m) => isMexicano(m) || m.is_tie_break || m.is_super_tie_break;
+
+function pointLabel(own, other, m) {
+  if (isRawCount(m)) return String(own);
+  if (own <= 3) return LABELS[own];
+  if (own === other) return '40';
+  return own > other ? 'AD' : '40';
+}
+const isDeuce = (m) => !isRawCount(m) && m.p_points >= 3 && m.o_points >= 3 && m.p_points === m.o_points;
+// Aufschlag von rechts bei gerader Punktzahl im Spiel, sonst links
+const serveSide = (m) => ((m.p_points + m.o_points) % 2 === 0 ? 'right' : 'left');
+
+// ---------- Rendering ----------
+function render() {
+  if (!match) return;
+  const m = match;
+  const pServes = m.serving_side === 0;
+
+  setText('setNo', t('set', { n: m.p_sets + m.o_sets + 1 }));
+  setText('mode', isMexicano(m) ? t('mexicano') : m.is_golden_point ? t('goldenPoint') : t('advantage'));
+
+  const banner = $('banner');
+  const bannerText = m.is_super_tie_break ? t('superTieBreak')
+    : m.is_tie_break ? t('tieBreak')
+    : isDeuce(m) ? (m.is_golden_point ? t('goldenPoint') : t('deuce'))
+    : '';
+  banner.textContent = bannerText;
+  banner.hidden = !bannerText;
+
+  setPoints('ptsP', pointLabel(m.p_points, m.o_points, m));
+  setPoints('ptsO', pointLabel(m.o_points, m.p_points, m));
+  setText('gamesP', m.p_games); setText('gamesO', m.o_games);
+  setText('setsP', m.p_sets); setText('setsO', m.o_sets);
+
+  $('cardP').classList.toggle('serving', pServes);
+  $('cardO').classList.toggle('serving', !pServes);
+  const side = serveSide(m);
+  document.querySelectorAll('.serve-row').forEach((el) => el.classList.toggle('right', side === 'right'));
+  renderUpdated();
+}
+
+function renderNames() {
+  setText('nameP', names.player);
+  setText('nameO', names.opponent);
+}
+
+function renderUpdated() {
+  if (!match?.updated_at) return;
+  const s = Math.max(0, Math.round((Date.now() - new Date(match.updated_at).getTime()) / 1000));
+  setText('updated', s < 60 ? t('lastPointS', { n: s }) : t('lastPointM', { n: Math.round(s / 60) }));
+}
+
+function setText(id, v) { const el = $(id); if (el.textContent !== String(v)) el.textContent = v; }
+function setPoints(id, v) {
+  const el = $(id);
+  if (el.textContent === v) return;
+  el.textContent = v;
+  el.classList.add('bump');
+  setTimeout(() => el.classList.remove('bump'), 180);
+}
+
+function setStatus(live, text) {
+  $('statusDot').classList.toggle('live', live);
+  setText('statusText', text);
+}
+
+// ---------- Sound ----------
+function renderSound() {
+  $('soundBtn').setAttribute('aria-pressed', String(soundOn));
+  $('icoOn').hidden = !soundOn;
+  $('icoOff').hidden = soundOn;
+  setText('soundTxt', soundOn ? t('soundOn') : t('soundOff'));
+}
+
+// Ansagen pro Sprache: Zahlen 0/15/30/40, Gleichstand, Einstand, Vorteil, Spiel, Satz
+const L = (code, label, native, nums, all, deuce, golden, adv, game, set) => ({
+  code, label, native, nums,
+  all: (x) => `${x} ${all}`, pair: (a, b) => `${a}, ${b}`,
+  deuce, golden, adv: (n) => `${adv} ${n}`, game: (n) => `${game} ${n}`, set: (n) => `${set} ${n}`,
+});
+const LANGS = {
+  en: L('en-GB', 'EN', 'English',    ['love', 'fifteen', 'thirty', 'forty'],          'all',     'Deuce',     'Golden point',     'Advantage', 'Game,', 'Set,'),
+  de: L('de-DE', 'DE', 'Deutsch',    ['null', 'fünfzehn', 'dreißig', 'vierzig'],      'beide',   'Einstand',  'Golden Point',     'Vorteil',   'Spiel', 'Satz'),
+  es: L('es-ES', 'ES', 'Español',    ['cero', 'quince', 'treinta', 'cuarenta'],       'iguales', 'Iguales',   'Punto de oro',     'Ventaja',   'Juego', 'Set'),
+  fr: L('fr-FR', 'FR', 'Français',   ['zéro', 'quinze', 'trente', 'quarante'],        'partout', 'Égalité',   'Point décisif',    'Avantage',  'Jeu',   'Set'),
+  it: L('it-IT', 'IT', 'Italiano',   ['zero', 'quindici', 'trenta', 'quaranta'],      'pari',    'Parità',    'Punto decisivo',   'Vantaggio', 'Gioco', 'Set'),
+  nl: L('nl-NL', 'NL', 'Nederlands', ['nul', 'vijftien', 'dertig', 'veertig'],        'gelijk',  'Gelijk',    'Beslissend punt',  'Voordeel',  'Game',  'Set'),
+  pt: L('pt-PT', 'PT', 'Português',  ['zero', 'quinze', 'trinta', 'quarenta'],        'iguais',  'Iguais',    'Ponto de ouro',    'Vantagem',  'Jogo',  'Set'),
+  sv: L('sv-SE', 'SV', 'Svenska',    ['noll', 'femton', 'trettio', 'fyrtio'],         'lika',    'Lika',      'Avgörande boll',   'Fördel',    'Game',  'Set'),
+  da: L('da-DK', 'DA', 'Dansk',      ['nul', 'femten', 'tredive', 'fyrre'],           'lige',    'Lige',      'Afgørende bold',   'Fordel',    'Partiet til', 'Sættet til'),
+};
+// Ansage-Sprache: gespeicherte Wahl, sonst Oberflächensprache
+let lang = LANGS[store.get('lang', uiLang)] ? store.get('lang', uiLang) : 'en';
+let voices = [];
+
+function loadVoices() {
+  if ('speechSynthesis' in window) voices = speechSynthesis.getVoices();
+}
+
+// Beste Stimme für die Sprache: exakte Region > gleiche Sprache, "Premium/Enhanced" bevorzugt
+function pickVoice(code) {
+  const base = code.slice(0, 2);
+  const score = (v) => {
+    const vl = v.lang.replace('_', '-');
+    let s = vl === code ? 4 : vl.startsWith(base) ? 2 : -100;
+    if (/premium|enhanced|natural/i.test(v.name)) s += 2;
+    if (v.localService) s += 1;
+    return s;
+  };
+  return voices.filter((v) => score(v) > 0).sort((a, b) => score(b) - score(a))[0] || null;
+}
+
+function renderLang() {
+  setText('langTxt', LANGS[lang].label);
+}
+
+function callout(prev, m) {
+  const L = LANGS[lang];
+  const name = (side) => (side === 'p' ? names.player : names.opponent);
+  if (prev) {
+    if (m.p_sets > prev.p_sets) return L.set(name('p'));
+    if (m.o_sets > prev.o_sets) return L.set(name('o'));
+    if (m.p_games > prev.p_games) return L.game(name('p'));
+    if (m.o_games > prev.o_games) return L.game(name('o'));
+  }
+  const serverIsP = m.serving_side === 0;
+  const s = serverIsP ? m.p_points : m.o_points;
+  const r = serverIsP ? m.o_points : m.p_points;
+  if (isRawCount(m)) return L.pair(s, r);
+  if (s >= 3 && r >= 3) {
+    if (s === r) return m.is_golden_point ? L.golden : L.deuce;
+    return L.adv(s > r ? name(serverIsP ? 'p' : 'o') : name(serverIsP ? 'o' : 'p'));
+  }
+  return s === r ? L.all(L.nums[s]) : L.pair(L.nums[s], L.nums[r]);
+}
+
+function speak(text) {
+  if (!soundOn || !('speechSynthesis' in window) || !text) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  const code = LANGS[lang].code;
+  u.lang = code;
+  // iOS ignoriert u.lang oft und nimmt die Systemstimme: Stimme explizit setzen
+  const v = pickVoice(code);
+  if (v) u.voice = v;
+  u.rate = 0.95;
+  speechSynthesis.speak(u);
+}
+
+// iOS gibt Sprachausgabe erst nach einer Nutzeraktion frei
+function unlockSpeech() {
+  if (!('speechSynthesis' in window)) return;
+  const u = new SpeechSynthesisUtterance(' ');
+  u.volume = 0;
+  speechSynthesis.speak(u);
+}
+
+// ---------- Screen wake lock ----------
+async function keepAwake() {
+  if (!('wakeLock' in navigator) || document.visibilityState !== 'visible') return;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+  } catch { /* nicht unterstützt oder abgelehnt */ }
+}
+
+// ---------- Data ----------
+async function fetchMatch() {
+  const { data, error } = await sb.rpc('get_match_by_pin', { _pin: pin }).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+function applyMatch(next, { announce }) {
+  if (!next || next.pin !== pin) return;
+  const prev = match;
+  const changed = !prev || prev.updated_at !== next.updated_at;
+  match = next;
+  render();
+  if (announce && changed && prev) speak(callout(prev, next));
+}
+
+function subscribe() {
+  channel = sb.channel(`match-${pin}`);
+  channel
+    .on('broadcast', { event: 'update' }, ({ payload }) => applyMatch(payload?.match, { announce: true }))
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') setStatus(true, t('live'));
+      else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setStatus(false, t('reconnecting'));
+      else if (status === 'CLOSED') setStatus(false, t('offline'));
+    });
+}
+
+// Sicherheitsnetz, falls ein Broadcast verloren geht
+async function poll() {
+  try { applyMatch(await fetchMatch(), { announce: true }); } catch { setStatus(false, t('offline')); }
+}
+
+async function start(newApp, newPin) {
+  app = newApp;
+  sb = clientFor(app);
+  store.set('app', app);
+  pin = newPin;
+  names = store.get(`names-${app}-${pin}`, defaultNames());
+  renderNames();
+  renderSound();
+  setText('pinLabel', `PIN ${pin}`);
+  history.replaceState(null, '', `?app=${app}&pin=${pin}`);
+
+  const m = await fetchMatch();
+  if (!m) throw new Error(t('notFound', { app: SOURCES[app].name }));
+  $('start').hidden = true;
+  $('board').hidden = false;
+  applyMatch(m, { announce: false });
+  subscribe();
+  pollTimer = setInterval(poll, POLL_MS);
+  setInterval(renderUpdated, 5000);
+  keepAwake();
+}
+
+async function stop() {
+  clearInterval(pollTimer);
+  if (channel) await sb.removeChannel(channel);
+  channel = null; match = null;
+  $('board').hidden = true;
+  $('start').hidden = false;
+  history.replaceState(null, '', location.pathname);
+}
+
+// ---------- Events ----------
+$('startForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const value = $('pin').value.trim();
+  $('startErr').textContent = '';
+  if (!/^\d{6}$/.test(value)) { $('startErr').textContent = t('enterSix'); return; }
+  unlockSpeech();
+  const chosen = document.querySelector('input[name="app"]:checked')?.value || 'padel';
+  try { await start(chosen, value); } catch (err) { $('startErr').textContent = err.message || t('loadFailed'); }
+});
+
+$('soundBtn').addEventListener('click', () => {
+  soundOn = !soundOn;
+  store.set('sound', soundOn);
+  renderSound();
+  if (soundOn) { unlockSpeech(); if (match) speak(callout(null, match)); }
+  else if ('speechSynthesis' in window) speechSynthesis.cancel();
+});
+
+let editSide = 'player';
+document.querySelectorAll('.name').forEach((btn) => btn.addEventListener('click', () => {
+  editSide = btn.dataset.side;
+  const blue = editSide === 'player';
+  setText('nameTeam', blue ? t('teamBlue') : t('teamOrange'));
+  $('nameDot').style.background = blue ? 'var(--blue)' : 'var(--orange)';
+  $('nameInput').value = names[editSide];
+  $('nameDlg').showModal();
+  $('nameInput').select();
+}));
+$('nameForm').addEventListener('submit', () => {
+  const fallback = editSide === 'player' ? t('player') : t('opponent');
+  names = { ...names, [editSide]: $('nameInput').value.trim().slice(0, 24) || fallback };
+  store.set(`names-${app}-${pin}`, names);
+  renderNames();
+});
+$('nameCancel').addEventListener('click', () => $('nameDlg').close());
+
+$('leaveBtn').addEventListener('click', stop);
+
+// Vollbild: iPad-Safari kann das (iPhone nicht). Als Home-Bildschirm-App ist es ohnehin Vollbild.
+const root = document.documentElement;
+const fsSupported = !!(root.requestFullscreen || root.webkitRequestFullscreen);
+const isStandalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const fsElement = () => document.fullscreenElement || document.webkitFullscreenElement;
+function renderFs() { setText('fsBtn', fsElement() ? t('exitFullscreen') : t('fullscreen')); }
+$('fsBtn').hidden = !fsSupported || isStandalone;
+$('fsBtn').addEventListener('click', () => {
+  if (fsElement()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  else (root.requestFullscreen || root.webkitRequestFullscreen).call(root);
+});
+document.addEventListener('fullscreenchange', renderFs);
+document.addEventListener('webkitfullscreenchange', renderFs);
+
+function renderLangGrid() {
+  $('langGrid').replaceChildren(...Object.entries(LANGS).map(([key, l]) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'lang-opt';
+    b.setAttribute('role', 'radio');
+    b.setAttribute('aria-checked', String(key === lang));
+    const name = document.createElement('b');
+    name.textContent = l.native;
+    const info = document.createElement('small');
+    const v = pickVoice(l.code);
+    info.textContent = key === lang ? t('selected') : v ? v.name : t('noVoice');
+    b.append(name, info);
+    b.addEventListener('click', () => {
+      lang = key;
+      store.set('lang', lang);
+      renderLang();
+      renderLangGrid();
+      unlockSpeech();
+      if (match) speak(callout(null, match));
+    });
+    return b;
+  }));
+}
+
+$('langBtn').addEventListener('click', () => {
+  loadVoices();
+  renderLangGrid();
+  $('langDlg').showModal();
+});
+$('langClose').addEventListener('click', () => $('langDlg').close());
+// Tippen auf den Hintergrund schließt die Dialoge
+document.querySelectorAll('dialog').forEach((d) => d.addEventListener('click', (e) => { if (e.target === d) d.close(); }));
+
+if ('speechSynthesis' in window) {
+  loadVoices();
+  speechSynthesis.addEventListener('voiceschanged', loadVoices);
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && pin) { keepAwake(); poll(); }
+});
+
+const isConfigured = (key) => !!(SOURCES[key]?.url && SOURCES[key]?.key);
+if (!isConfigured('watch')) {
+  $('appWatch').remove();
+  document.querySelector('label[for="appWatch"]').remove();
+}
+document.querySelector('.seg').style.gridTemplateColumns = `repeat(${document.querySelectorAll('.seg input').length}, minmax(0, 1fr))`;
+
+const params = new URLSearchParams(location.search);
+const urlPin = params.get('pin');
+const urlApp = params.get('app');
+const stored = store.get('app', 'padel');
+const initialApp = isConfigured(urlApp) ? urlApp : isConfigured(stored) ? stored : 'padel';
+document.querySelector(`input[name="app"][value="${initialApp}"]`).checked = true;
+if (urlPin) $('pin').value = urlPin;
+translateStatic();
+renderSound();
+renderLang();
+</script>
+</body>
+</html>
